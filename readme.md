@@ -1,0 +1,140 @@
+# touch robot
+
+Screenshot tests are great, but they don't catch broken UI interactions before your users do. `touch robot` fixes that by generating fake touch events to exercise your UI.
+
+```kotlin
+class InteractionTest {
+  @get:Rule val paparazzi = Paparazzi()
+  
+  @Test fun test() {
+    paparazzi.gif(end = 2_500) {
+      Content(…)
+
+      val touchRobot = rememberTouchRobot()
+      LaunchedEffect(Unit) {
+        touchRobot.onRoot().performGesture {
+          click()
+          longClick()
+          swipe(…)
+          draw(…)
+          pinch(…)
+        }
+      }
+    }   
+  }
+}
+```
+
+### Supported gestures
+
+#### Swipe
+<img align="right" width="30%" src="/touchrobot-paparazzi/src/test/snapshots/videos/me.saket.touchrobot_TouchRobotPaparazziTest_swipes.png">
+
+```kotlin
+paparazzi.gif(end = 2_500) {
+  Column(…) {
+    repeat(5) { index ->
+      Carousel(Modifier.testTag("page$index"))
+    }  
+  }
+  
+  val touchRobot = rememberTouchRobot()
+  LaunchedEffect(Unit) {
+    touchRobot.onNode(hasTestTag("page2")).performGesture {
+      repeat(3) {
+        swipe(
+          start = center,
+          stop = centerLeft,
+          duration = 300.milliseconds,
+        )
+        delay(300)
+      }
+    }
+  }
+}
+```
+<br clear="all"/>
+
+#### Draw
+<img align="right" width="30%" src="/touchrobot-paparazzi/src/test/snapshots/videos/me.saket.touchrobot_TouchRobotPaparazziTest_custom_path.png">
+
+```kotlin
+paparazzi.gif(end = 3_000) {
+  DebitCard(
+    Modifier.testTag("card")
+  )
+
+  val touchRobot = rememberTouchRobot()
+  LaunchedEffect(Unit) {
+    touchRobot.onNode(hasTestTag("card")).performGesture {
+      draw(
+        path = createAndroidHeadPath(),
+        duration = 3.seconds,
+      )
+    }
+  }
+}
+
+/** A path drawing the Android head. */
+fun createAndroidHeadPath(bounds: Rect): Path = TODO()
+```
+
+<br clear="all"/>
+
+#### Click
+<img align="right" width="30%" src="/touchrobot-paparazzi/src/test/snapshots/videos/me.saket.touchrobot_TouchRobotPaparazziTest_clicks.png">
+
+```kotlin
+paparazzi.gif(end = 1000) {
+  Row {
+    Button {
+      Text("Left")
+    }
+    Button {
+      Text("Center")
+    }
+  }
+
+  val touchRobot = rememberTouchRobot()
+  LaunchedEffect(Unit) {
+    touchRobot.onNode(hasText("Left")).performGesture {
+      click()
+    }
+    delay(500)
+    touchRobot.onNode(hasText("Center")).performGesture {
+      longClick()
+    }
+  }
+}
+```
+<br clear="all"/>
+
+#### Pinch
+
+<img align="right" width="30%" src="/touchrobot-paparazzi/src/test/snapshots/videos/me.saket.touchrobot_TouchRobotPaparazziTest_pinch_to_zoom.png">
+
+```kotlin
+paparazzi.gif(end = 2000) {
+  ZoomableAsyncImage(
+    modifier = Modifier.testTag("image"),
+    model = "https://dog.ceo/image.jpg",
+    contentDescription = null,
+  )
+
+  val touchRobot = rememberTouchRobot()
+  LaunchedEffect(Unit) {
+    touchRobot.onNode(hasTestTag("image")).performGesture {
+      val startOffset = IntOffset(100, 100)
+      val endOffset = IntOffset(300, 300)
+
+      pinch(
+        start0 = center - startOffset,
+        start1 = center + startOffset,
+        end0 = center - endOffset,
+        end1 = center + endOffset,
+        duration = 1.seconds,
+      )
+    }
+  }
+}
+```

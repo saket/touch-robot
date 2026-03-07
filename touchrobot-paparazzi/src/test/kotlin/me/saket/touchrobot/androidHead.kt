@@ -1,0 +1,53 @@
+package me.saket.touchrobot
+
+import android.graphics.Matrix
+import android.graphics.RectF
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.asComposePath
+import androidx.compose.ui.graphics.toAndroidRectF
+import androidx.core.graphics.PathParser
+
+/** A path drawing the Android head, adapted from material-icons. */
+fun createAndroidHeadPath(bounds: Rect): Path {
+  val svgData = """
+    |M17.6 9.48
+    | l1.84 -3.18
+    | c0.16 -0.31 0.04 -0.69 -0.26 -0.85
+    | c-0.29 -0.15 -0.65 -0.06 -0.83 0.22
+    | l-1.88 3.24
+    | c-2.86 -1.21 -6.08 -1.21 -8.94 0
+    | L5.65 5.67
+    | c-0.19 -0.29 -0.58 -0.38 -0.87 -0.2
+    | C4.5 5.65 4.41 6.01 4.56 6.3
+    | L6.4 9.48
+    | C3.3 11.25 1.28 14.44 1 18
+    | h22
+    | C22.72 14.44 20.7 11.25 17.6 9.48
+    | Z
+    | 
+    | M7 15.25
+    | c-0.69 0 -1.25 -0.56 -1.25 -1.25
+    | c0 -0.69 0.56 -1.25 1.25 -1.25
+    | S8.25 13.31 8.25 14
+    | C8.25 14.69 7.69 15.25 7 15.25
+    | Z
+    | 
+    | M17 15.25
+    | c-0.69 0 -1.25 -0.56 -1.25 -1.25
+    | c0 -0.69 0.56 -1.25 1.25 -1.25
+    | s1.25 0.56 1.25 1.25
+    | C18.25 14.69 17.69 15.25 17 15.25
+    | Z
+    |""".trimMargin()
+
+  val path = PathParser.createPathFromPathData(svgData)
+
+  val originalBounds = RectF(0f, 0f, 24f, 24f)
+  val matrix = Matrix().apply {
+    setRectToRect(originalBounds, bounds.toAndroidRectF(), Matrix.ScaleToFit.CENTER)
+  }
+  path.transform(matrix)
+
+  return path.asComposePath()
+}

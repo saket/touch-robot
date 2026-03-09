@@ -35,5 +35,13 @@ dependencies {
 
   // TODO: this needs to be testImplementation, but paparazzi currently fails
   //  to resolve a dependency's resources unless its part of the main sources.
+  //  https://github.com/cashapp/paparazzi/issues/2303
   debugImplementation(libs.androidx.compose.material3)
+}
+
+// TODO remove once fixed: https://github.com/cashapp/paparazzi/issues/2303
+tasks.configureEach {
+  if (name.contains("Release") && name.contains("UnitTest")) {
+    enabled = false
+  }
 }

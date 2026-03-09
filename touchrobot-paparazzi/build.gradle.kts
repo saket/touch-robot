@@ -45,3 +45,8 @@ tasks.configureEach {
     enabled = false
   }
 }
+
+// TODO: remove once fixed: https://github.com/cashapp/paparazzi/issues/2111
+tasks.withType<Test>().configureEach {
+  reports.html.required = false
+}

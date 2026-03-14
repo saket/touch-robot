@@ -374,6 +374,7 @@ class TouchRobotPaparazziTest {
   }
 }
 
+// todo: upstream this to paparazzi
 private fun Paparazzi.gif(
   start: Long = 0L,
   end: Long = 500L,

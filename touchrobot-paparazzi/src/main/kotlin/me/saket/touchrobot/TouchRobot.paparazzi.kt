@@ -25,7 +25,6 @@ import kotlin.time.Duration.Companion.milliseconds
  *
  * @see rememberTouchRobot
  */
-
 fun TouchRobot.onNode(matcher: SemanticsMatcher): TouchRobotTarget {
   return onBounds { hostView ->
     hostView.awaitNodeBounds(matcher)

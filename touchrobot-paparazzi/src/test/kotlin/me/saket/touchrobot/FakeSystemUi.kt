@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 
+/** TODO: replace this with https://github.com/saket/fake-system-ui */
 @Composable
 internal fun FakeSystemUi(
   darkTheme: Boolean = false,

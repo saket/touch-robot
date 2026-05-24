@@ -1,6 +1,6 @@
-# touch-robot
+# Touch Robot
 
-[Paparazzi](https://github.com/cashapp/paparazzi/) screenshot tests are great, but they don't catch broken UI interactions before your users do. Anything that lives *between* a layout and a tap (animations, gestures, ripples, scroll-driven UI) goes untested. `touch-robot` fixes that by generating fake touch events to exercise your UI.
+[Paparazzi](https://github.com/cashapp/paparazzi/) screenshot tests are great, but they don't catch broken UI interactions before your users do. Anything that lives *between* a layout and a tap (animations, gestures, ripples, scroll-driven UI) goes untested. Touch Robot fixes that by generating fake touch events to exercise your UI.
 
 ```gradle
 implementation("me.saket.touchrobot:touchrobot-paparazzi:0.1.0")
@@ -37,7 +37,7 @@ For those unaware, think of `paparazzi.gif()` as recording a video of your UI, e
 
 **Show taps**
 
-By default, `touch-robot` renders the pointer location so that you can visually see where the touch events are landing. This is similar to the `Show taps` option in Android's developer settings. You can disable it if needed:
+By default, Touch Robot renders the pointer location so that you can visually see where the touch events are landing. This is similar to the `Show taps` option in Android's developer settings. You can disable it if needed:
 
 ```kotlin
 rememberTouchRobot(showTaps = false)
@@ -45,7 +45,7 @@ rememberTouchRobot(showTaps = false)
 
 **Don't use Paparazzi?**
 
-While `touch-robot` was designed with Paparazzi in mind, its core can also be used with any other screenshot testing library of your choice:
+While Touch Robot was designed with Paparazzi in mind, its core can also be used with any other screenshot testing library of your choice:
 
 ```diff
 - implementation("me.saket.touchrobot:touchrobot-paparazzi:0.1.0")

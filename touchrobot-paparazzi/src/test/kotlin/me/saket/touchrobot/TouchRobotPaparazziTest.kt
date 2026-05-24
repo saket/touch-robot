@@ -270,7 +270,7 @@ class TouchRobotPaparazziTest {
         Box(
           Modifier
             .fillMaxSize()
-            .background(Color(0xFFE6EE9C))
+            .background(Color(0xFF7A1FFF))
             .padding(contentPadding),
         )
 

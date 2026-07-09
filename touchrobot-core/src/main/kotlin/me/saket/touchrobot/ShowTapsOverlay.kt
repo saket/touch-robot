@@ -2,6 +2,7 @@ package me.saket.touchrobot
 
 import android.content.Context
 import android.graphics.PixelFormat
+import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.View.OnAttachStateChangeListener
@@ -178,16 +179,30 @@ internal fun MatchParentSizePopup(
     }
 
     val windowManager = hostView.context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+    val hostLocation = IntArray(2)
     val layoutParams = WindowManager.LayoutParams().also {
       it.width = if (hostView.width == 0) ViewGroup.LayoutParams.MATCH_PARENT else hostView.width
       it.height = if (hostView.height == 0) ViewGroup.LayoutParams.WRAP_CONTENT else hostView.height
       it.format = PixelFormat.TRANSLUCENT
+      // Anchor the overlay to the host view. Without an explicit gravity, WindowManager centers
+      // the window on screen, so an overlay smaller than the screen ends up offset from the host
+      // (and from the taps, which are drawn at the host's coordinates). x/y are absolute screen
+      // coordinates, so use LEFT (not START) — START would be mirrored under RTL layouts and
+      // reintroduce the offset.
+      it.gravity = Gravity.TOP or Gravity.LEFT
+      hostView.getLocationOnScreen(hostLocation)
+      it.x = hostLocation[0]
+      it.y = hostLocation[1]
     }
     windowManager.addView(popupLayout, layoutParams)
 
     hostView.doOnEveryLayout {
       layoutParams.width = it.width
       layoutParams.height = it.height
+      // The host can move as well as resize, so refresh its screen position too.
+      it.getLocationOnScreen(hostLocation)
+      layoutParams.x = hostLocation[0]
+      layoutParams.y = hostLocation[1]
       windowManager.updateViewLayout(popupLayout, layoutParams)
     }
 

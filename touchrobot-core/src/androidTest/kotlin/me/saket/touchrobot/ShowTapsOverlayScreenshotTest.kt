@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.dropbox.differ.SimpleImageComparator
 import com.dropbox.dropshots.Dropshots
 import kotlinx.coroutines.awaitCancellation
 import org.junit.Rule
@@ -38,7 +39,10 @@ import java.util.concurrent.TimeUnit
 @RunWith(AndroidJUnit4::class)
 class ShowTapsOverlayScreenshotTest {
   @get:Rule val composeRule = createAndroidComposeRule<ScreenshotActivity>()
-  @get:Rule val dropshots = Dropshots()
+  @get:Rule val dropshots = Dropshots(
+    // UiAutomation captures compositor output, whose colors can drift slightly between captures.
+    imageComparator = SimpleImageComparator(maxDistance = 0.12f),
+  )
 
   @Test fun show_taps_overlay_misplaced_when_host_view_does_not_fill_screen() {
     val tapIsDown = CountDownLatch(1)

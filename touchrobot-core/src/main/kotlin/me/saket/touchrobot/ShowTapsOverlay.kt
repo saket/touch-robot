@@ -1,6 +1,7 @@
 package me.saket.touchrobot
 
 import android.content.Context
+import android.graphics.PixelFormat
 import android.view.MotionEvent
 import android.view.View
 import android.view.View.OnAttachStateChangeListener
@@ -180,6 +181,7 @@ internal fun MatchParentSizePopup(
     val layoutParams = WindowManager.LayoutParams().also {
       it.width = if (hostView.width == 0) ViewGroup.LayoutParams.MATCH_PARENT else hostView.width
       it.height = if (hostView.height == 0) ViewGroup.LayoutParams.WRAP_CONTENT else hostView.height
+      it.format = PixelFormat.TRANSLUCENT
     }
     windowManager.addView(popupLayout, layoutParams)
 

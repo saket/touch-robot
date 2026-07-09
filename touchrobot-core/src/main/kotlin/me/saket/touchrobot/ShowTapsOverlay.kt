@@ -44,11 +44,13 @@ import kotlinx.coroutines.flow.map
  */
 @Composable
 internal fun ShowTapsOverlay(touchRobot: TouchRobot) {
+  val hostView = LocalView.current
   val state by remember(touchRobot) {
     touchRobot.events.map {
       if (it == null) {
         TapState(isPressed = false, positions = emptyList())
       } else {
+        val hostOffsetFromRoot = hostView.offsetFromRootView()
         TapState(
           isPressed = it.isPressed(),
           positions = (0 until it.pointerCount)
@@ -57,7 +59,10 @@ internal fun ShowTapsOverlay(touchRobot: TouchRobot) {
               it.actionMasked == MotionEvent.ACTION_POINTER_UP && pointerIndex == it.actionIndex
             }
             .map { pointerIndex ->
-              Offset(it.getX(pointerIndex), it.getY(pointerIndex))
+              Offset(
+                x = it.getX(pointerIndex) - hostOffsetFromRoot.x,
+                y = it.getY(pointerIndex) - hostOffsetFromRoot.y,
+              )
             }
         )
       }
@@ -135,6 +140,17 @@ private data class TapState(
 
 private fun MotionEvent.isPressed(): Boolean {
   return actionMasked != MotionEvent.ACTION_UP && actionMasked != MotionEvent.ACTION_CANCEL
+}
+
+private fun View.offsetFromRootView(): Offset {
+  val rootLocation = IntArray(2)
+  val viewLocation = IntArray(2)
+  rootView.getLocationOnScreen(rootLocation)
+  getLocationOnScreen(viewLocation)
+  return Offset(
+    x = (viewLocation[0] - rootLocation[0]).toFloat(),
+    y = (viewLocation[1] - rootLocation[1]).toFloat(),
+  )
 }
 
 /**

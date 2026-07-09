@@ -72,6 +72,7 @@ class TouchRobotPaparazziTest {
   @get:Rule val paparazzi = Paparazzi(
     deviceConfig = DeviceConfig.PIXEL_6_PRO,
     renderingMode = SessionParams.RenderingMode.SHRINK,
+    maxPercentDifference = 0.025,
   )
 
   @Test fun clicks() {

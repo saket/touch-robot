@@ -16,6 +16,7 @@ plugins {
   alias(libs.plugins.kotlin.android) apply false
   alias(libs.plugins.compose.compiler) apply false
   alias(libs.plugins.paparazzi) apply false
+  alias(libs.plugins.dropshots) apply false
   alias(libs.plugins.dokka) apply false
   alias(libs.plugins.mavenPublish) apply false
 }

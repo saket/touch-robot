@@ -2,6 +2,7 @@ plugins {
   alias(libs.plugins.android.library)
   alias(libs.plugins.kotlin.android)
   alias(libs.plugins.compose.compiler)
+  alias(libs.plugins.dropshots)
   alias(libs.plugins.mavenPublish)
 }
 
@@ -11,6 +12,8 @@ android {
   defaultConfig {
     minSdk = libs.versions.minSdk.get().toInt()
     compileSdk = libs.versions.compileSdk.get().toInt()
+    targetSdk = libs.versions.compileSdk.get().toInt()
+    testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     lint.abortOnError = true
   }
 }
@@ -21,6 +24,15 @@ dependencies {
   implementation(libs.androidx.ktx)
   implementation(libs.androidx.lifecycle)
   implementation(libs.androidx.savedstate)
+
+  androidTestImplementation(libs.androidx.activityCompose)
+  androidTestImplementation(libs.androidx.compose.ui.test.junit)
+  androidTestImplementation(libs.androidx.test.core)
+  androidTestImplementation(libs.androidx.test.espresso.core)
+  androidTestImplementation(libs.androidx.test.ext.junit)
+  androidTestImplementation(libs.androidx.test.runner)
+  androidTestImplementation(libs.dropshots)
+  androidTestImplementation(libs.junit)
 }
 
 // Used on CI to prevent publishing of non-snapshot versions.

@@ -11,7 +11,6 @@
 - [ ] Ensure that the release is available on maven by using it in `:sample`
 - [ ] Check that the library sources are correctly available.
 - [ ] Push commit.
-- [ ] Generate a sample APK.
 - [ ] Draft a changelog.
 - [ ] Make a release on Github.
 - [ ] Push a new commit `Prepare next development version` by bumping version and changing library version to SNAPSHOT.

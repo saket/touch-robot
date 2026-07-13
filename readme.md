@@ -3,7 +3,7 @@
 [Paparazzi](https://github.com/cashapp/paparazzi/) screenshot tests are great, but they don't catch broken UI interactions before your users do. Anything that lives *between* a layout and a tap (animations, gestures, ripples, scroll-driven UI) goes untested. Touch Robot fixes that by generating fake touch events to exercise your UI.
 
 ```gradle
-implementation("me.saket.touchrobot:touchrobot-paparazzi:0.1.0")
+implementation("me.saket.touchrobot:touchrobot-paparazzi:0.2.0")
 ```
 
 ```kotlin
@@ -48,8 +48,8 @@ rememberTouchRobot(showTaps = false)
 While Touch Robot was designed with Paparazzi in mind, its core can also be used with any other screenshot testing library of your choice:
 
 ```diff
-- implementation("me.saket.touchrobot:touchrobot-paparazzi:0.1.0")
-+ implementation("me.saket.touchrobot:touchrobot-core:0.1.0")
+- implementation("me.saket.touchrobot:touchrobot-paparazzi:0.2.0")
++ implementation("me.saket.touchrobot:touchrobot-core:0.2.0")
 ```
 
 You'll likely need to copy [TouchRobot.paparazzi.kt](https://github.com/saket/touch-robot/blob/trunk/touchrobot-paparazzi/src/main/kotlin/me/saket/touchrobot/TouchRobot.paparazzi.kt) into your project and adapt it for your chosen library.

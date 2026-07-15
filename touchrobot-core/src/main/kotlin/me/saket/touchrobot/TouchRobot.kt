@@ -167,6 +167,34 @@ interface TouchRobotGestureScope : Density {
   )
 
   /**
+   * Animate [pointerId] from its current position to [position] over [duration], dispatching
+   * `ACTION_MOVE` events on each frame (with the same easing as [draw]).
+   *
+   * Unlike [swipe] and [draw], this does not send `ACTION_DOWN` or `ACTION_UP` events — it
+   * continues an already-active gesture. This makes it the building block for composing
+   * multi-phase gestures such as long-press → drag → hold → drag → release:
+   *
+   * ```
+   * touchRobot.onRoot().performGesture {
+   *   down(start)
+   *   delay(viewConfiguration.longPressTimeoutMillis + 100.milliseconds)
+   *   moveTo(dwell, 700.milliseconds)
+   *   delay(5.seconds)
+   *   moveTo(drop, 700.milliseconds)
+   *   up()
+   * }
+   * ```
+   *
+   * Requires a prior [down] for [pointerId]. Use [kotlinx.coroutines.delay] to keep the
+   * pointer stationary between calls.
+   */
+  suspend fun moveTo(
+    position: IntOffset,
+    duration: Duration,
+    pointerId: PointerId = PointerId(0),
+  )
+
+  /**
    * Perform a pinch gesture from [start0, start1] to [end0, end1].
    *
    * ```

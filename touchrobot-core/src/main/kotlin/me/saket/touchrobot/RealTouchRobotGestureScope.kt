@@ -153,6 +153,31 @@ internal class RealTouchRobotGestureScope(
     )
   }
 
+  override suspend fun moveTo(
+    position: IntOffset,
+    duration: Duration,
+    pointerId: PointerId,
+  ) {
+    require(duration > Duration.ZERO) { "moveTo() requires a positive duration" }
+    val ongoingGesture = ongoingGesture
+      ?: error("Cannot call moveTo() when no gesture is in progress. Call down() first.")
+    val currentPosition = ongoingGesture.downPositions[pointerId]
+      ?: error("Cannot call moveTo() for pointer $pointerId as it is not active in the current gesture.")
+
+    val pathMeasure = Path().apply {
+      moveTo(currentPosition.x.toFloat(), currentPosition.y.toFloat())
+      lineTo(position.x.toFloat(), position.y.toFloat())
+    }.measure()
+
+    animateAlongPaths(
+      motionDownTime = ongoingGesture.downTime,
+      motionStartTime = SystemClock.uptimeMillis(),
+      duration = duration,
+      pointerIds = listOf(pointerId),
+      pathMeasures = listOf(pathMeasure),
+    )
+  }
+
   // Not public because TouchRobot doesn't support different movement
   // patterns per pointer yet (for simplicity).
   private suspend fun draw(
@@ -164,10 +189,6 @@ internal class RealTouchRobotGestureScope(
       "Cannot draw a new gesture when another gesture is already in progress. " +
         "Call up() for all active pointers first."
     }
-
-    // Use a non-linear easing function to mimic a human's finger movement.
-    // We can may consider making customizable in the future.
-    val easing = EaseInOutSine
 
     // A single Path can contain multiple "contours" (also called sub-paths). Each contour is one
     // continuous sequence of drawing commands and should be treated as a separate gesture.
@@ -188,6 +209,7 @@ internal class RealTouchRobotGestureScope(
     // assuming that all contours have the same length, which is true for now.
     val primaryContourLengths = contourLengthsPerPath.first()
     val totalContourLength = primaryContourLengths.sum()
+    val pointerIds = pathMeasures.indices.map { PointerId(it.toLong()) }
 
     for (contourLength in primaryContourLengths) {
       if (contourLength == 0f) {
@@ -198,48 +220,78 @@ internal class RealTouchRobotGestureScope(
 
       val downTime = SystemClock.uptimeMillis()
       pathMeasures.fastForEachIndexed { index, pathMeasure ->
-        down(PointerId(index.toLong()), pathMeasure.getIntPosition(0f))
+        down(pointerIds[index], pathMeasure.getIntPosition(0f))
       }
 
-      var frameDurationMs = 0L
-      var progress = 0f
+      animateAlongPaths(
+        motionDownTime = downTime,
+        motionStartTime = downTime,
+        duration = contourDuration,
+        pointerIds = pointerIds,
+        pathMeasures = pathMeasures,
+      )
 
-      while (progress < 1f) {
-        // delay() gets queued behind layoutlib's frame clock, which Paparazzi drives.
-        // By using 1 no matter Paparazzi's FPS, we will be called on the next frame.
-        delay(1)
-
-        val eventTime = SystemClock.uptimeMillis()
-        if (frameDurationMs == 0L) {
-          frameDurationMs = eventTime - downTime
-        }
-
-        progress = easing.transform(
-          ((eventTime - downTime).toFloat() / contourDuration.inWholeMilliseconds).coerceIn(0f, 1f)
-        )
-        val historicalTimeDelta = -frameDurationMs / 2f
-        val historicalProgress = (progress + historicalTimeDelta / contourDuration.inWholeMilliseconds).coerceIn(0f, 1f)
-
-        val positions = pathMeasures.fastMap { it.getIntPosition(progress) }
-        dispatchMoveEventWithHistory(
-          downTime = downTime,
-          eventTime = eventTime,
-          pointerIds = pathMeasures.indices.map { PointerId(it.toLong()) },
-          positions = positions,
-          historicalTimeDelta = historicalTimeDelta.roundToLong(),
-          historicalPositions = pathMeasures.fastMap { it.getIntPosition(historicalProgress) },
-        )
-        positions.fastForEachIndexed { index, position ->
-          ongoingGesture!!.downPositions[PointerId(index.toLong())] = position
-        }
-      }
-
-      pathMeasures.fastForEachIndexed { index, _ ->
-        up(PointerId(index.toLong()))
-      }
+      pointerIds.forEach { up(it) }
 
       // Advance all path measures to the next contour for the next iteration.
       pathMeasures.forEach { it.nextContour() }
+    }
+  }
+
+  /**
+   * Drive the given [pathMeasures] forward for [duration], dispatching `ACTION_MOVE` events on
+   * each frame using an [EaseInOutSine] curve. Assumes pointers are already down — callers are
+   * responsible for [down]/[up].
+   *
+   * [motionDownTime] is the `MotionEvent.downTime` (when the gesture's first `ACTION_DOWN`
+   * happened); [motionStartTime] is when this specific animation segment begins (used to compute
+   * progress). For full gestures driven by [draw] these coincide; for [moveTo] they differ because
+   * [down] was called earlier by the caller.
+   */
+  private suspend fun animateAlongPaths(
+    motionDownTime: Long,
+    motionStartTime: Long,
+    duration: Duration,
+    pointerIds: List<PointerId>,
+    pathMeasures: List<AndroidPathMeasure>,
+  ) {
+    check(pointerIds.size == pathMeasures.size)
+    val ongoingGesture = ongoingGesture!!
+
+    // Non-linear easing mimics a human's finger movement. Could be customizable in the future.
+    val easing = EaseInOutSine
+
+    var frameDurationMs = 0L
+    var progress = 0f
+
+    while (progress < 1f) {
+      // delay() gets queued behind layoutlib's frame clock, which Paparazzi drives.
+      // By using 1 no matter Paparazzi's FPS, we will be called on the next frame.
+      delay(1)
+
+      val eventTime = SystemClock.uptimeMillis()
+      if (frameDurationMs == 0L) {
+        frameDurationMs = eventTime - motionStartTime
+      }
+
+      progress = easing.transform(
+        ((eventTime - motionStartTime).toFloat() / duration.inWholeMilliseconds).coerceIn(0f, 1f)
+      )
+      val historicalTimeDelta = -frameDurationMs / 2f
+      val historicalProgress = (progress + historicalTimeDelta / duration.inWholeMilliseconds).coerceIn(0f, 1f)
+
+      val positions = pathMeasures.fastMap { it.getIntPosition(progress) }
+      dispatchMoveEventWithHistory(
+        downTime = motionDownTime,
+        eventTime = eventTime,
+        pointerIds = pointerIds,
+        positions = positions,
+        historicalTimeDelta = historicalTimeDelta.roundToLong(),
+        historicalPositions = pathMeasures.fastMap { it.getIntPosition(historicalProgress) },
+      )
+      positions.fastForEachIndexed { index, position ->
+        ongoingGesture.downPositions[pointerIds[index]] = position
+      }
     }
   }
 

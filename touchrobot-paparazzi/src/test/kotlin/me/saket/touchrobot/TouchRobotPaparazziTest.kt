@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -351,6 +352,56 @@ class TouchRobotPaparazziTest {
 
           up(PointerId(0))
           delay(500)
+        }
+      }
+    }
+  }
+
+  @Test fun `move to continues active pointer`() {
+    paparazzi.gif(end = 4000, fps = 30) {
+      var downCount by remember { mutableIntStateOf(0) }
+      var upCount by remember { mutableIntStateOf(0) }
+      var moveCount by remember { mutableIntStateOf(0) }
+
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(400.dp)
+          .background(Color(0xFF1565C0))
+          .pointerInput(Unit) {
+            awaitPointerEventScope {
+              while (true) {
+                val event = awaitPointerEvent()
+                when (event.type) {
+                  PointerEventType.Press -> downCount++
+                  PointerEventType.Release -> upCount++
+                  PointerEventType.Move -> moveCount++
+                }
+              }
+            }
+          }
+          .testTag("content"),
+        contentAlignment = Alignment.Center,
+      ) {
+        BasicText(
+          text = "down=$downCount  up=$upCount  moves=$moveCount",
+          style = TextStyle(fontSize = 20.sp, color = Color.White, fontWeight = FontWeight.Bold),
+        )
+      }
+
+      val touchRobot = rememberTouchRobot()
+      LaunchedEffect(Unit) {
+        delay(200)
+        touchRobot.onNode(hasTestTag("content")).performGesture {
+          // Press down once, then animate through multiple positions WITHOUT lifting.
+          // The text overlay should show down=1, up=0 throughout the entire gesture.
+          down(topLeft + IntOffset(80, 80))
+          delay(viewConfiguration.longPressTimeoutMillis + 100L)
+          moveTo(center, 700.milliseconds)
+          delay(500)
+          moveTo(bottomRight - IntOffset(80, 80), 700.milliseconds)
+          delay(200)
+          up()
         }
       }
     }

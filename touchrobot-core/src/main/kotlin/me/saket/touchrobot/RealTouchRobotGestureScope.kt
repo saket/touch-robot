@@ -1,6 +1,7 @@
 package me.saket.touchrobot
 
 import android.os.SystemClock
+import android.view.Choreographer
 import android.view.InputDevice
 import android.view.MotionEvent
 import androidx.compose.animation.core.EaseInOutSine
@@ -15,6 +16,8 @@ import androidx.compose.ui.util.fastDistinctBy
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.compose.ui.util.fastMap
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 import kotlin.time.Duration
@@ -78,11 +81,24 @@ internal class RealTouchRobotGestureScope(
     }
   }
 
+  fun cancelGesture() {
+    val ongoingGesture = ongoingGesture
+    if (ongoingGesture != null) {
+      dispatchTouchEvent(
+        action = MotionEvent.ACTION_CANCEL,
+        downTime = ongoingGesture.downTime,
+        eventTime = SystemClock.uptimeMillis(),
+        allPointers = ongoingGesture.downPositions.toList(),
+        actionPointerId = ongoingGesture.downPositions.keys.first(),
+      )
+      this.ongoingGesture = null
+    }
+  }
+
   override suspend fun click(position: IntOffset) {
-    click(
-      position = position,
-      duration = 16.milliseconds,
-    )
+    down(position)
+    awaitAnimationFrame()
+    up()
   }
 
   override suspend fun longClick(position: IntOffset) {
@@ -94,11 +110,24 @@ internal class RealTouchRobotGestureScope(
 
   private suspend fun click(
     position: IntOffset,
-    duration: Duration = 16.milliseconds,
+    duration: Duration,
   ) {
     down(position)
     delay(duration)
     up()
+  }
+
+  private suspend fun awaitAnimationFrame() {
+    suspendCancellableCoroutine { continuation ->
+      val choreographer = Choreographer.getInstance()
+      val callback = Choreographer.FrameCallback {
+        continuation.resume(Unit)
+      }
+      choreographer.postFrameCallback(callback)
+      continuation.invokeOnCancellation {
+        choreographer.removeFrameCallback(callback)
+      }
+    }
   }
 
   override suspend fun swipe(
@@ -317,8 +346,11 @@ internal class RealTouchRobotGestureScope(
       /* flags = */ 0,
     )
 
-    dispatcher.dispatch(event)
-    event.recycle()
+    try {
+      dispatcher.dispatch(event)
+    } finally {
+      event.recycle()
+    }
   }
 
   private fun dispatchMoveEventWithHistory(
@@ -376,8 +408,11 @@ internal class RealTouchRobotGestureScope(
       /* metaState = */ 0,
     )
 
-    dispatcher.dispatch(event)
-    event.recycle()
+    try {
+      dispatcher.dispatch(event)
+    } finally {
+      event.recycle()
+    }
   }
 
   companion object {

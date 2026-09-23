@@ -43,7 +43,10 @@ fun rememberTouchRobot(
   val hostView = LocalView.current
 
   return remember(hostView) {
-    RealTouchRobot(hostView)
+    RealTouchRobot(
+      hostView = hostView,
+      dispatchToRootView = true,
+    )
   }.also { touchRobot ->
     if (showTaps) {
       // Display touch events on the UI. It's probably terrible that a remember
@@ -61,6 +64,20 @@ fun rememberTouchRobot(
  */
 interface TouchRobot {
   val events: Flow<MotionEvent?>
+
+  companion object {
+    /**
+     * Creates a robot that dispatches touch events directly to [hostView].
+     *
+     * Use this outside Compose or when the target belongs to another window.
+     */
+    operator fun invoke(hostView: View): TouchRobot {
+      return RealTouchRobot(
+        hostView = hostView,
+        dispatchToRootView = false,
+      )
+    }
+  }
 
   /**
    * Target the entire UI hierarchy for performing gestures.
@@ -110,7 +127,10 @@ interface TouchRobot {
 }
 
 interface TouchRobotTarget {
-  suspend fun performGesture(block: suspend TouchRobotGestureScope.() -> Unit)
+  /**
+   * Performs a gesture and returns whether the target handled any dispatched event.
+   */
+  suspend fun performGesture(block: suspend TouchRobotGestureScope.() -> Unit): Boolean
 }
 
 /** Inspired by [TouchInjectionScope][androidx.compose.ui.test.TouchInjectionScope]. */

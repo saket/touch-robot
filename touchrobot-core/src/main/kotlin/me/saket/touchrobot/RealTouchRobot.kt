@@ -17,11 +17,11 @@ import kotlin.time.Duration.Companion.seconds
 
 internal class RealTouchRobot(
   hostView: View,
+  dispatchToRootView: Boolean,
 ) : TouchRobot {
 
   private val hostView: View by lazy(NONE) {
-    // Find the root view so that overlays can also be targeted.
-    hostView.rootView
+    if (dispatchToRootView) hostView.rootView else hostView
   }
 
   override val events = MutableSharedFlow<MotionEvent?>(
@@ -53,9 +53,10 @@ private class RealTouchRobotTarget(
   private val touchDispatcher: MotionEventDispatcher,
 ) : TouchRobotTarget {
 
-  override suspend fun performGesture(block: suspend TouchRobotGestureScope.() -> Unit) {
+  override suspend fun performGesture(block: suspend TouchRobotGestureScope.() -> Unit): Boolean {
     hostView.awaitLayout()
 
+    var dispatchWasHandled = false
     val scope = RealTouchRobotGestureScope(
       // Deflate the bounds by 1px so that touch events always fall _inside_ the touch target.
       bounds = targetBounds(hostView).deflate(1),
@@ -66,9 +67,19 @@ private class RealTouchRobotTarget(
         density = hostView.resources.displayMetrics.density,
         fontScale = hostView.resources.configuration.fontScale,
       ),
-      dispatcher = touchDispatcher,
+      dispatcher = { event ->
+        touchDispatcher.dispatch(event).also { wasHandled ->
+          dispatchWasHandled = dispatchWasHandled || wasHandled
+        }
+      },
     )
-    block(scope)
+    try {
+      block(scope)
+    } catch (e: Throwable) {
+      scope.cancelGesture()
+      throw e
+    }
+    return dispatchWasHandled
   }
 
   private suspend fun View.awaitLayout() {

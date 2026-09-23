@@ -33,6 +33,7 @@ dependencies {
   androidTestImplementation(libs.androidx.test.runner)
   androidTestImplementation(libs.dropshots)
   androidTestImplementation(libs.junit)
+  androidTestImplementation(libs.assertk)
 }
 
 // Used on CI to prevent publishing of non-snapshot versions.

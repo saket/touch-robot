@@ -26,16 +26,25 @@ import kotlin.time.Duration.Companion.milliseconds
  * @see rememberTouchRobot
  */
 fun TouchRobot.onNode(matcher: SemanticsMatcher): TouchRobotTarget {
+  return onNode(matcher, useUnmergedTree = false)
+}
+
+/**
+ * @param useUnmergedTree If `true`, searches the unmerged semantics tree instead of the merged
+ *   semantics tree. This allows you to search for individual nodes that would otherwise be part of
+ *   a larger semantic unit, for example a text and an image forming a button together.
+ */
+fun TouchRobot.onNode(matcher: SemanticsMatcher, useUnmergedTree: Boolean): TouchRobotTarget {
   return onBounds { hostView ->
-    hostView.awaitNodeBounds(matcher)
+    hostView.awaitNodeBounds(matcher, useUnmergedTree)
   }
 }
 
-private suspend fun View.awaitNodeBounds(matcher: SemanticsMatcher): IntRect {
+private suspend fun View.awaitNodeBounds(matcher: SemanticsMatcher, useUnmergedTree: Boolean): IntRect {
   val bounds = withTimeoutOrNull(200.milliseconds) {
     var node: SemanticsNode?
     while (true) {
-      node = findFirstSemanticNode(matcher)
+      node = findFirstSemanticNode(matcher, useUnmergedTree)
       if (node == null) delay(1) else break
     }
     node.boundsInRoot.roundToIntRect()
@@ -46,7 +55,7 @@ private suspend fun View.awaitNodeBounds(matcher: SemanticsMatcher): IntRect {
 }
 
 @SuppressLint("VisibleForTests")
-private fun View.findFirstSemanticNode(matcher: SemanticsMatcher): SemanticsNode? {
+private fun View.findFirstSemanticNode(matcher: SemanticsMatcher, useUnmergedTree: Boolean): SemanticsNode? {
   // The view hierarchy might have multiple ViewRootForTest. Each interop point between
   // Compose and Views (through AbstractComposeView) will have its own ViewRootForTest.
   // Find them all before running the semantics matcher.
@@ -57,7 +66,8 @@ private fun View.findFirstSemanticNode(matcher: SemanticsMatcher): SemanticsNode
     }
   }
   return viewRootForTests.firstNotNullOfOrNull {
-    it.semanticsOwner.rootSemanticsNode.findFirst(matcher)
+    val root = if (useUnmergedTree) it.semanticsOwner.unmergedRootSemanticsNode else it.semanticsOwner.rootSemanticsNode
+    root.findFirst(matcher)
   }
 }
 

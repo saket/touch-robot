@@ -140,7 +140,7 @@ class TouchRobotPaparazziTest {
       val touchRobot = rememberTouchRobot()
       LaunchedEffect(Unit) {
         delay(300)
-        touchRobot.onNode(hasTestTag("child-tag")).performGesture {
+        touchRobot.onNode(hasTestTag("child-tag"), useUnmergedTree = true).performGesture {
           click()
         }
       }

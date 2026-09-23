@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.findViewTreeSavedStateRegistryOwner
@@ -186,9 +187,10 @@ internal fun MatchParentSizePopup(
   val compositionContext = rememberCompositionContext()
 
   DisposableEffect(Unit) {
+    val lifecycleOwner = hostView.findViewTreeLifecycleOwner()
     val popupLayout = ComposeView(hostView.context).apply {
       id = android.R.id.content
-      setViewTreeLifecycleOwner(hostView.findViewTreeLifecycleOwner())
+      setViewTreeLifecycleOwner(lifecycleOwner)
       setViewTreeSavedStateRegistryOwner(hostView.findViewTreeSavedStateRegistryOwner())
       setParentCompositionContext(compositionContext)
       setContent(content)
@@ -224,7 +226,12 @@ internal fun MatchParentSizePopup(
 
     onDispose {
       popupLayout.disposeComposition()
-      windowManager.removeViewImmediate(popupLayout)
+      if (
+        popupLayout.isAttachedToWindow &&
+        lifecycleOwner?.lifecycle?.currentState != Lifecycle.State.DESTROYED
+      ) {
+        windowManager.removeViewImmediate(popupLayout)
+      }
     }
   }
 }

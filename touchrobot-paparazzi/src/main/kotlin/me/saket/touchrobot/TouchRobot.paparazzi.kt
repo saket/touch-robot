@@ -50,7 +50,7 @@ private suspend fun View.awaitNodeBounds(matcher: SemanticsMatcher, useUnmergedT
     node.boundsInRoot.roundToIntRect()
   }
   return checkNotNull(bounds) {
-    "Timed out waiting for node that matches: $matcher"
+    "Timed out waiting for node that matches: ${matcher.description}"
   }
 }
 

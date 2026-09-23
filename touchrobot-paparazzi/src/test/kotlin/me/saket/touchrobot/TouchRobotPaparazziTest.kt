@@ -120,6 +120,33 @@ class TouchRobotPaparazziTest {
     }
   }
 
+  @Test fun `finds child tags in the unmerged tree`() {
+    paparazzi.gif(end = 900) {
+      var taps by remember { mutableIntStateOf(0) }
+      FakeSystemUi {
+        Box(
+          modifier = Modifier
+            .align(Alignment.Center)
+            .size(96.dp)
+            .background(if (taps == 0) Color.Red else Color.Green)
+            // Clickable introduces a merged semantics tree.
+            .clickable { taps++ },
+          contentAlignment = Alignment.Center,
+        ) {
+          Box(Modifier.size(32.dp).testTag("child-tag"))
+        }
+      }
+
+      val touchRobot = rememberTouchRobot()
+      LaunchedEffect(Unit) {
+        delay(300)
+        touchRobot.onNode(hasTestTag("child-tag")).performGesture {
+          click()
+        }
+      }
+    }
+  }
+
   @Test fun swipes() {
     paparazzi.gif(end = 5000, fps = 60) {
       FakeSystemUi { contentPadding ->

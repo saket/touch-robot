@@ -1,5 +1,6 @@
 package me.saket.touchrobot
 
+import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Image
@@ -33,6 +34,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +44,7 @@ import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.test.hasTestTag
@@ -54,8 +57,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toRect
 import androidx.compose.ui.util.lerp
+import androidx.core.view.descendants
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.findViewTreeLifecycleOwner
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
+import assertk.assertThat
+import assertk.assertions.isEqualTo
 import me.saket.touchrobot.paparazzi.R
 import com.android.ide.common.rendering.api.SessionParams
 import kotlinx.coroutines.delay
@@ -383,6 +392,40 @@ class TouchRobotPaparazziTest {
     }
   }
 
+  @Test fun `tap overlay detaches when the host lifecycle is destroyed`() {
+    // Keep the render surface sized after lifecycle destruction removes the composition.
+    paparazzi.unsafeUpdateConfig(renderingMode = SessionParams.RenderingMode.NORMAL)
+
+    var overlayAttachedAfterDestroy: Boolean? = null
+
+    paparazzi.gif(end = 500) {
+      Box(Modifier.size(100.dp))
+
+      val hostView = LocalView.current
+      rememberTouchRobot()
+
+      LaunchedEffect(Unit) {
+        withFrameNanos {}
+        // Layoutlib adds popup windows to the host's view tree. Exclude the test's own ComposeView.
+        val overlay = (hostView.rootView as ViewGroup).descendants
+          .filterIsInstance<ComposeView>()
+          .single { it !== hostView.parent }
+
+        // Newer Paparazzi versions destroy the lifecycle at teardown. Alpha02 needs this explicit step.
+        // Post outside the composition because lifecycle destruction cancels this LaunchedEffect.
+        hostView.post {
+          val lifecycleRegistry = hostView.findViewTreeLifecycleOwner()!!.lifecycle as LifecycleRegistry
+          lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
+          hostView.post {
+            overlayAttachedAfterDestroy = overlay.isAttachedToWindow
+          }
+        }
+      }
+    }
+
+    assertThat(overlayAttachedAfterDestroy, name = "tap overlay is attached").isEqualTo(false)
+  }
+
   @Test fun `taps overlay works with shrink render mode`() {
     paparazzi.gif(end = 1000) {
       Box(
@@ -403,7 +446,7 @@ class TouchRobotPaparazziTest {
 }
 
 // todo: upstream this to paparazzi
-private fun Paparazzi.gif(
+internal fun Paparazzi.gif(
   start: Long = 0L,
   end: Long = 500L,
   fps: Int = 30,

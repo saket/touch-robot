@@ -46,6 +46,7 @@ dropshots = { module = "com.dropbox.dropshots:dropshots", version.ref = "dropsho
 telephoto = { module = "me.saket.telephoto:zoomable", version.ref = "telephoto" }
 
 junit = { module = "junit:junit", version.ref = "junit" }
+assertk = { module = "com.willowtreeapps.assertk:assertk", version = "0.28.1" }
 androidx-compose-ui-test-junit = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "androidx-compose-ui" }
 androidx-test-core = { module = "androidx.test:core-ktx", version.ref = "androidx-test-core" }
 androidx-test-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "androidx-test-espresso" }

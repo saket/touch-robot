@@ -31,6 +31,7 @@ dependencies {
   lintChecks(libs.composeLintChecks)
 
   testImplementation(libs.junit)
+  testImplementation(libs.assertk)
   testImplementation(libs.telephoto)
 
   // TODO: this needs to be testImplementation, but paparazzi currently fails

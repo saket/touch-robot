@@ -226,11 +226,15 @@ internal fun MatchParentSizePopup(
 
     onDispose {
       popupLayout.disposeComposition()
-      if (
-        popupLayout.isAttachedToWindow &&
-        lifecycleOwner?.lifecycle?.currentState != Lifecycle.State.DESTROYED
-      ) {
-        windowManager.removeViewImmediate(popupLayout)
+      if (popupLayout.isAttachedToWindow) {
+        try {
+          windowManager.removeViewImmediate(popupLayout)
+        } catch (e: NullPointerException) {
+          // Layoutlib can clear its window list before Paparazzi destroys the lifecycle.
+          if (lifecycleOwner?.lifecycle?.currentState != Lifecycle.State.DESTROYED) {
+            throw e
+          }
+        }
       }
     }
   }

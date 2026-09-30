@@ -1,16 +1,15 @@
 plugins {
   alias(libs.plugins.android.application)
-  alias(libs.plugins.kotlin.android)
   alias(libs.plugins.compose.compiler)
 }
 
 android {
   namespace = "me.saket.touchrobot.sample"
+  compileSdk = libs.versions.compileSdk.get().toInt()
 
   defaultConfig {
     applicationId = namespace
     minSdk = 31
-    compileSdk = libs.versions.compileSdk.get().toInt()
     targetSdk = libs.versions.compileSdk.get().toInt()
     versionCode = 1
     versionName = "1.0"

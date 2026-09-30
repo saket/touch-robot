@@ -1,6 +1,5 @@
 plugins {
   alias(libs.plugins.android.library)
-  alias(libs.plugins.kotlin.android)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.dropshots)
   alias(libs.plugins.mavenPublish)
@@ -9,12 +8,13 @@ plugins {
 android {
   namespace = "me.saket.touchrobot"
 
+  compileSdk = libs.versions.compileSdk.get().toInt()
+  lint.abortOnError = true
+  testOptions.targetSdk = libs.versions.compileSdk.get().toInt()
+
   defaultConfig {
     minSdk = libs.versions.minSdk.get().toInt()
-    compileSdk = libs.versions.compileSdk.get().toInt()
-    targetSdk = libs.versions.compileSdk.get().toInt()
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    lint.abortOnError = true
   }
 }
 

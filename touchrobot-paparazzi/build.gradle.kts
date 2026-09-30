@@ -1,6 +1,5 @@
 plugins {
   alias(libs.plugins.android.library)
-  alias(libs.plugins.kotlin.android)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.paparazzi)
   alias(libs.plugins.mavenPublish)
@@ -8,11 +7,11 @@ plugins {
 
 android {
   namespace = "me.saket.touchrobot.paparazzi"
+  compileSdk = libs.versions.compileSdk.get().toInt()
+  lint.abortOnError = true
 
   defaultConfig {
     minSdk = libs.versions.minSdk.get().toInt()
-    compileSdk = libs.versions.compileSdk.get().toInt()
-    lint.abortOnError = true
   }
   testOptions {
     unitTests {
@@ -27,6 +26,7 @@ dependencies {
   api(libs.androidx.compose.foundation)
   api(libs.androidx.compose.ui.test.junit)
   api(libs.paparazzi)
+  implementation(libs.androidx.ktx)
 
   lintChecks(libs.composeLintChecks)
 

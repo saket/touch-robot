@@ -59,7 +59,9 @@ private class RealTouchRobotTarget(
     hostRootView.awaitLayout()
     val targetBounds = targetBounds(hostRootView)
     val targetRootView = targetBounds.windowRootView
-    targetRootView.awaitLayout()
+    if (targetRootView !== hostRootView) {
+      targetRootView.awaitLayout()
+    }
 
     val locationBuffer = IntArray(2)
     val scope = RealTouchRobotGestureScope(
@@ -86,9 +88,6 @@ private class RealTouchRobotTarget(
   }
 
   private suspend fun View.awaitLayout() {
-    if (isLaidOut) {
-      return
-    }
     try {
       withTimeout(1.seconds) {
         suspendCancellableCoroutine<Unit> { continuation ->

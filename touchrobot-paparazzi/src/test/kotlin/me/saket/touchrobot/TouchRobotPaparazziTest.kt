@@ -1,6 +1,5 @@
 package me.saket.touchrobot
 
-import android.view.ViewGroup.LayoutParams
 import android.view.WindowManagerGlobal
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Image
@@ -486,25 +485,6 @@ class TouchRobotPaparazziTest {
       }
     }
   }
-}
-
-// todo: upstream this to paparazzi
-internal fun Paparazzi.gif(
-  start: Long = 0L,
-  end: Long = 500L,
-  fps: Int = 30,
-  composable: @Composable () -> Unit,
-) {
-  val hostView = ComposeView(context).apply {
-    layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
-  }
-  hostView.setContent(composable)
-  gif(
-    view = hostView,
-    start = start,
-    end = end,
-    fps = fps,
-  )
 }
 
 @Composable

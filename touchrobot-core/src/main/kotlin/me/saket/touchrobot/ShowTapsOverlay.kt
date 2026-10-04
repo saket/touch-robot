@@ -38,6 +38,7 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.findViewTreeSavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import kotlinx.coroutines.flow.map
+import java.io.Closeable
 
 /**
  * Mimics the "Show taps" settings in Android's developer settings by drawing a visual feedback
@@ -51,7 +52,6 @@ internal fun ShowTapsOverlay(touchRobot: TouchRobot) {
       if (it == null) {
         TapState(isPressed = false, positions = emptyList())
       } else {
-        val hostOffsetFromRoot = hostView.offsetFromRootView()
         TapState(
           isPressed = it.isPressed(),
           positions = (0 until it.pointerCount)
@@ -61,8 +61,8 @@ internal fun ShowTapsOverlay(touchRobot: TouchRobot) {
             }
             .map { pointerIndex ->
               Offset(
-                x = it.getX(pointerIndex) - hostOffsetFromRoot.x,
-                y = it.getY(pointerIndex) - hostOffsetFromRoot.y,
+                x = it.getX(pointerIndex),
+                y = it.getY(pointerIndex),
               )
             }
         )
@@ -91,16 +91,18 @@ internal fun ShowTapsOverlay(touchRobot: TouchRobot) {
     // When paparazzi uses RenderingMode.SHRINK, the incoming layout constraint
     // doesn't wrap the content width. Instead, it uses the width of the device
     // config. Modifier.matchSize() works around this.
-    Canvas(Modifier.matchSize(LocalView.current)) {
+    val overlayView = LocalView.current
+    Canvas(Modifier.matchSize(overlayView)) {
       state.positions.forEach { position ->
+        val tapPositionInOverlay = position + hostView.rootView.offsetFrom(overlayView)
         drawCircle(
           color = Color.White.copy(alpha = alpha.value * 0.75f),
-          center = position,
+          center = tapPositionInOverlay,
           radius = radius.value.toPx(),
         )
         drawCircle(
           color = Color(0xFF0099FF).copy(alpha = alpha.value),
-          center = position,
+          center = tapPositionInOverlay,
           radius = radius.value.toPx(),
           style = Stroke(width = strokeWidth.value.toPx()),
         )
@@ -143,28 +145,26 @@ private fun MotionEvent.isPressed(): Boolean {
   return actionMasked != MotionEvent.ACTION_UP && actionMasked != MotionEvent.ACTION_CANCEL
 }
 
-private fun View.offsetFromRootView(): Offset {
-  val rootLocation = IntArray(2)
-  val viewLocation = IntArray(2)
-  rootView.getLocationOnScreen(rootLocation)
-  getLocationOnScreen(viewLocation)
+private fun View.offsetFrom(otherView: View): Offset {
+  val location = IntArray(2)
+  getLocationOnScreen(location)
+  val x = location[0]
+  val y = location[1]
+
+  otherView.getLocationOnScreen(location)
   return Offset(
-    x = (viewLocation[0] - rootLocation[0]).toFloat(),
-    y = (viewLocation[1] - rootLocation[1]).toFloat(),
+    x = (x - location[0]).toFloat(),
+    y = (y - location[1]).toFloat(),
   )
 }
 
 /**
  * `doOnLayout` runs only once at the beginning; `doOnEveryLayout` runs every time.
  */
-private inline fun View.doOnEveryLayout(crossinline action: (view: View) -> Unit) {
+private inline fun View.doOnEveryLayout(crossinline action: (view: View) -> Unit): Closeable {
   val listener = View.OnLayoutChangeListener { view, _, _, _, _, _, _, _, _ -> action(view) }
 
-  if (isAttachedToWindow) {
-    addOnLayoutChangeListener(listener)
-  }
-
-  addOnAttachStateChangeListener(object : OnAttachStateChangeListener {
+  val attachListener = object : OnAttachStateChangeListener {
     override fun onViewDetachedFromWindow(v: View) {
       removeOnLayoutChangeListener(listener)
     }
@@ -172,7 +172,16 @@ private inline fun View.doOnEveryLayout(crossinline action: (view: View) -> Unit
     override fun onViewAttachedToWindow(v: View) {
       addOnLayoutChangeListener(listener)
     }
-  })
+  }
+  if (isAttachedToWindow) {
+    addOnLayoutChangeListener(listener)
+  }
+  addOnAttachStateChangeListener(attachListener)
+
+  return Closeable {
+    removeOnLayoutChangeListener(listener)
+    removeOnAttachStateChangeListener(attachListener)
+  }
 }
 
 /**
@@ -199,32 +208,31 @@ internal fun MatchParentSizePopup(
     val windowManager = hostView.context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     val hostLocation = IntArray(2)
     val layoutParams = WindowManager.LayoutParams().also {
-      it.width = if (hostView.width == 0) ViewGroup.LayoutParams.MATCH_PARENT else hostView.width
+      it.width = if (hostView.width == 0) ViewGroup.LayoutParams.WRAP_CONTENT else hostView.width
       it.height = if (hostView.height == 0) ViewGroup.LayoutParams.WRAP_CONTENT else hostView.height
       it.format = PixelFormat.TRANSLUCENT
       // Anchor the overlay to the host view. Without an explicit gravity, WindowManager centers
       // the window on screen, so an overlay smaller than the screen ends up offset from the host
-      // (and from the taps, which are drawn at the host's coordinates). x/y are absolute screen
-      // coordinates, so use LEFT (not START) — START would be mirrored under RTL layouts and
-      // reintroduce the offset.
+      // (and from the taps, which are drawn at the host's coordinates). Dialog windows have
+      // their own coordinate space, so use window coordinates. LEFT (not START) avoids RTL mirroring.
       it.gravity = Gravity.TOP or Gravity.LEFT
-      hostView.getLocationOnScreen(hostLocation)
+      hostView.getLocationInWindow(hostLocation)
       it.x = hostLocation[0]
       it.y = hostLocation[1]
     }
     windowManager.addView(popupLayout, layoutParams)
 
-    hostView.doOnEveryLayout {
+    val hostLayoutRegistration = hostView.doOnEveryLayout {
       layoutParams.width = it.width
       layoutParams.height = it.height
-      // The host can move as well as resize, so refresh its screen position too.
-      it.getLocationOnScreen(hostLocation)
+      it.getLocationInWindow(hostLocation)  // The host can move/resize, so refresh its window position too.
       layoutParams.x = hostLocation[0]
       layoutParams.y = hostLocation[1]
       windowManager.updateViewLayout(popupLayout, layoutParams)
     }
 
     onDispose {
+      hostLayoutRegistration.close()
       popupLayout.disposeComposition()
       if (popupLayout.isAttachedToWindow) {
         try {

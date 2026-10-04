@@ -47,7 +47,7 @@ fun rememberTouchRobot(
   }.also { touchRobot ->
     if (showTaps) {
       // Display touch events on the UI. It's probably terrible that a remember
-      // function has a side-effect of displaying UI, but this makes it super
+      // function has a side effect of displaying UI, but this makes it super
       // easy to see how the touch events interact with the UI.
       ShowTapsOverlay(touchRobot)
     }
@@ -81,8 +81,8 @@ interface TouchRobot {
    * Target a specific region for performing gestures.
    *
    * ```
-   * val target = touchRobot.onBounds {
-   *   // Find coordinates of the region, relative to the root.
+   * val target = touchRobot.onTargetBounds { hostView ->
+   *   // Find coordinates of the region, relative to its window.
    * }
    * target.performGesture {
    *   swipe(
@@ -97,7 +97,7 @@ interface TouchRobot {
    * `onNode()` from the `touchrobot-paparazzi` artifact:
    *
    * ```
-   * touchRobot.onNode(hasTestTag("Nicolas Cage")).performGesture {
+   * touchRobot.onNode(hasTestTag("nicolas cage")).performGesture {
    *   swipe(
    *     start = bottomCenter,
    *     end = center,
@@ -106,11 +106,30 @@ interface TouchRobot {
    * }
    * ```
    */
+  fun onTargetBounds(bounds: suspend (hostView: View) -> TouchRobotTarget.Bounds): TouchRobotTarget
+
+  /** Same as [onTargetBounds], but only works for touch targets located in the current window. */
+  @Deprecated(
+    message = "Use onTargetBounds instead.",
+    replaceWith = ReplaceWith(
+      expression = "onTargetBounds { hostView -> TouchRobotTarget.Bounds(hostView.rootView, bounds(hostView)) }",
+      imports = ["me.saket.touchrobot.TouchRobotTarget"],
+    ),
+  )
   fun onBounds(bounds: suspend (hostView: View) -> IntRect): TouchRobotTarget
 }
 
 interface TouchRobotTarget {
   suspend fun performGesture(block: suspend TouchRobotGestureScope.() -> Unit)
+
+  /**
+   * Describes a touch target for [TouchRobot.onTargetBounds]. [bounds] are relative to the
+   * [window][windowRootView] that receives the gesture.
+   */
+  data class Bounds(
+    val windowRootView: View,
+    val bounds: IntRect,
+  )
 }
 
 /** Inspired by [TouchInjectionScope][androidx.compose.ui.test.TouchInjectionScope]. */

@@ -1,7 +1,7 @@
 package me.saket.touchrobot
 
-import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams
+import android.view.WindowManagerGlobal
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.LocalIndication
@@ -25,8 +25,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,7 +61,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toRect
 import androidx.compose.ui.util.lerp
-import androidx.core.view.descendants
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.findViewTreeLifecycleOwner
@@ -65,18 +68,19 @@ import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import me.saket.touchrobot.paparazzi.R
 import com.android.ide.common.rendering.api.SessionParams
 import kotlinx.coroutines.delay
 import me.saket.telephoto.zoomable.ZoomSpec
 import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
+import me.saket.touchrobot.paparazzi.R
 import org.junit.Rule
 import org.junit.Test
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+@OptIn(ExperimentalMaterial3Api::class)
 class TouchRobotPaparazziTest {
   @get:Rule val paparazzi = Paparazzi(
     deviceConfig = DeviceConfig.PIXEL_6_PRO,
@@ -142,7 +146,11 @@ class TouchRobotPaparazziTest {
             .clickable { taps++ },
           contentAlignment = Alignment.Center,
         ) {
-          Box(Modifier.size(32.dp).testTag("child-tag"))
+          Box(
+            Modifier
+              .size(32.dp)
+              .testTag("child-tag")
+          )
         }
       }
 
@@ -300,7 +308,6 @@ class TouchRobotPaparazziTest {
     }
   }
 
-  @OptIn(ExperimentalMaterial3Api::class)
   @Test fun overlays() {
     paparazzi.gif(end = 2000, fps = 60) {
       FakeSystemUi { contentPadding ->
@@ -406,10 +413,9 @@ class TouchRobotPaparazziTest {
 
       LaunchedEffect(Unit) {
         withFrameNanos {}
-        // Layoutlib adds popup windows to the host's view tree. Exclude the test's own ComposeView.
-        val overlay = (hostView.rootView as ViewGroup).descendants
+        val overlay = WindowManagerGlobal.getInstance().windowViews
           .filterIsInstance<ComposeView>()
-          .single { it !== hostView.parent }
+          .single { it.isAttachedToWindow }
 
         // Newer Paparazzi versions destroy the lifecycle at teardown. Alpha02 needs this explicit step.
         // Post outside the composition because lifecycle destruction cancels this LaunchedEffect.
@@ -439,6 +445,43 @@ class TouchRobotPaparazziTest {
       LaunchedEffect(Unit) {
         touchRobot.onNode(hasTestTag("content")).performGesture {
           longClick()
+        }
+      }
+    }
+  }
+
+  @Test fun `tap overlay is correctly positioned even when the robot is inside a separate window`() {
+    paparazzi.gif(end = 1200) {
+      Box(
+        Modifier
+          .fillMaxWidth()
+          .height(300.dp)
+          .background(Color.Black),
+      ) {
+        BasicAlertDialog(onDismissRequest = {}) {
+          Surface(shape = RoundedCornerShape(32.dp)) {
+            Column(Modifier.padding(24.dp)) {
+              Text(
+                "Delete this file?"
+              )
+              TextButton(
+                modifier = Modifier
+                  .align(Alignment.End)
+                  .testTag("delete-button"),
+                onClick = {},
+              ) {
+                Text("Delete")
+              }
+
+              val touchRobot = rememberTouchRobot()
+              LaunchedEffect(Unit) {
+                delay(300.milliseconds)
+                touchRobot.onNode(hasTestTag("delete-button")).performGesture {
+                  longClick()
+                }
+              }
+            }
+          }
         }
       }
     }

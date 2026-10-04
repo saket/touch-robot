@@ -19,8 +19,7 @@ internal class RealTouchRobot(
   hostView: View,
 ) : TouchRobot {
 
-  private val hostView: View by lazy(NONE) {
-    // Find the root view so that overlays can also be targeted.
+  private val hostRootView: View by lazy(NONE) {
     hostView.rootView
   }
 
@@ -30,48 +29,66 @@ internal class RealTouchRobot(
   )
 
   override fun onRoot(): TouchRobotTarget {
-    return onBounds { hostView ->
-      IntRect(0, 0, hostView.rootView.width, hostView.rootView.height)
+    return onTargetBounds { hostRootView ->
+      TouchRobotTarget.Bounds(
+        windowRootView = hostRootView,
+        bounds = IntRect(0, 0, hostRootView.width, hostRootView.height),
+      )
     }
   }
 
+  override fun onTargetBounds(bounds: suspend (hostView: View) -> TouchRobotTarget.Bounds): TouchRobotTarget {
+    return RealTouchRobotTarget(hostRootView, bounds, events)
+  }
+
+  @Suppress("OVERRIDE_DEPRECATION")
   override fun onBounds(bounds: suspend (hostView: View) -> IntRect): TouchRobotTarget {
-    return RealTouchRobotTarget(
-      hostView = hostView,
-      targetBounds = bounds,
-      touchDispatcher = { event ->
-        events.tryEmit(event)
-        hostView.dispatchTouchEvent(event)
-      }
-    )
+    return onTargetBounds { hostRootView ->
+      TouchRobotTarget.Bounds(hostRootView, bounds(hostRootView))
+    }
   }
 }
 
 private class RealTouchRobotTarget(
-  private val hostView: View,
-  private val targetBounds: suspend (hostView: View) -> IntRect,
-  private val touchDispatcher: MotionEventDispatcher,
+  private val hostRootView: View,
+  private val targetBounds: suspend (hostView: View) -> TouchRobotTarget.Bounds,
+  private val events: MutableSharedFlow<MotionEvent?>,
 ) : TouchRobotTarget {
 
   override suspend fun performGesture(block: suspend TouchRobotGestureScope.() -> Unit) {
-    hostView.awaitLayout()
+    hostRootView.awaitLayout()
+    val targetBounds = targetBounds(hostRootView)
+    val targetRootView = targetBounds.windowRootView
+    targetRootView.awaitLayout()
 
+    val locationBuffer = IntArray(2)
     val scope = RealTouchRobotGestureScope(
       // Deflate the bounds by 1px so that touch events always fall _inside_ the touch target.
-      bounds = targetBounds(hostView).deflate(1),
+      bounds = targetBounds.bounds.deflate(1),
       viewConfiguration = AndroidViewConfiguration(
-        ViewConfiguration.get(hostView.context),
+        ViewConfiguration.get(targetRootView.context),
       ),
       density = Density(
-        density = hostView.resources.displayMetrics.density,
-        fontScale = hostView.resources.configuration.fontScale,
+        density = targetRootView.resources.displayMetrics.density,
+        fontScale = targetRootView.resources.configuration.fontScale,
       ),
-      dispatcher = touchDispatcher,
+      dispatcher = MotionEventDispatcher { event ->
+        val eventForTapOverlay = event.copyWithOffsetRelativeTo(
+          source = targetRootView,
+          destination = hostRootView,
+          locationBuffer = locationBuffer,
+        )
+        events.tryEmit(eventForTapOverlay)
+        targetRootView.dispatchTouchEvent(event)
+      },
     )
     block(scope)
   }
 
   private suspend fun View.awaitLayout() {
+    if (isLaidOut) {
+      return
+    }
     try {
       withTimeout(1.seconds) {
         suspendCancellableCoroutine<Unit> { continuation ->
@@ -84,4 +101,25 @@ private class RealTouchRobotTarget(
       throw RuntimeException("Timed out waiting for view to be laid out", e)
     }
   }
+}
+
+private fun MotionEvent.copyWithOffsetRelativeTo(
+  source: View,
+  destination: View,
+  locationBuffer: IntArray,
+): MotionEvent {
+  if (source === destination) {
+    return this
+  }
+  source.getLocationOnScreen(locationBuffer)
+  val sourceX = locationBuffer[0]
+  val sourceY = locationBuffer[1]
+
+  destination.getLocationOnScreen(locationBuffer)
+  val feedbackEvent = MotionEvent.obtain(this)
+  feedbackEvent.offsetLocation(
+    (sourceX - locationBuffer[0]).toFloat(),
+    (sourceY - locationBuffer[1]).toFloat(),
+  )
+  return feedbackEvent
 }

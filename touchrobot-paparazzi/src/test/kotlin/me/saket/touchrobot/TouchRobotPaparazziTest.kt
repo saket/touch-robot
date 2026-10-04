@@ -116,15 +116,15 @@ class TouchRobotPaparazziTest {
 
       val touchRobot = rememberTouchRobot()
       LaunchedEffect(Unit) {
-        delay(500)
+        delay(500.milliseconds)
         touchRobot.onNode(hasText("Left")).performGesture {
           click(centerRight)
         }
-        delay(500)
+        delay(500.milliseconds)
         touchRobot.onNode(hasText("Center")).performGesture {
           longClick(center)
         }
-        delay(500)
+        delay(500.milliseconds)
         touchRobot.onNode(hasText("Right")).performGesture {
           click(centerLeft)
         }
@@ -155,7 +155,7 @@ class TouchRobotPaparazziTest {
 
       val touchRobot = rememberTouchRobot()
       LaunchedEffect(Unit) {
-        delay(300)
+        delay(300.milliseconds)
         touchRobot.onNode(hasTestTag("child-tag"), useUnmergedTree = true).performGesture {
           click()
         }
@@ -192,7 +192,7 @@ class TouchRobotPaparazziTest {
 
       val touchRobot = rememberTouchRobot()
       LaunchedEffect(Unit) {
-        delay(500)
+        delay(500.milliseconds)
         touchRobot.onRoot().performGesture {
           swipe(
             start = (center + bottomCenter) / 2f,
@@ -200,7 +200,7 @@ class TouchRobotPaparazziTest {
             duration = 600.milliseconds,
           )
         }
-        delay(500)
+        delay(500.milliseconds)
         touchRobot.onNode(hasTestTag("carousel_2")).performGesture {
           repeat(3) {
             swipe(
@@ -208,10 +208,10 @@ class TouchRobotPaparazziTest {
               stop = centerLeft,
               duration = 300.milliseconds,
             )
-            delay(300)
+            delay(300.milliseconds)
           }
         }
-        delay(500)
+        delay(500.milliseconds)
         touchRobot.onRoot().performGesture {
           swipe(
             start = center,
@@ -279,7 +279,7 @@ class TouchRobotPaparazziTest {
 
       val touchRobot = rememberTouchRobot()
       LaunchedEffect(Unit) {
-        delay(500)
+        delay(500.milliseconds)
 
         touchRobot.onNode(hasTestTag("image")).performGesture {
           val startOffset = IntOffset(100, 100)
@@ -292,7 +292,7 @@ class TouchRobotPaparazziTest {
             duration = 1.seconds,
           )
 
-          delay(500)
+          delay(500.milliseconds)
 
           // Zoom out.
           pinch(
@@ -338,7 +338,7 @@ class TouchRobotPaparazziTest {
 
       val touchRobot = rememberTouchRobot()
       LaunchedEffect(Unit) {
-        delay(500)
+        delay(500.milliseconds)
 
         touchRobot.onNode(hasTestTag("sheet-content")).performGesture {
           swipe(
@@ -379,20 +379,20 @@ class TouchRobotPaparazziTest {
 
       val touchRobot = rememberTouchRobot()
       LaunchedEffect(Unit) {
-        delay(200)
+        delay(200.milliseconds)
 
         touchRobot.onNode(hasTestTag("content")).performGesture {
           down(PointerId(0), center.minus(IntOffset(0, 200)))
-          delay(500)
+          delay(500.milliseconds)
 
           down(PointerId(1), center.plus(IntOffset(0, 200)))
-          delay(500)
+          delay(500.milliseconds)
 
           up(PointerId(1))
-          delay(500)
+          delay(500.milliseconds)
 
           up(PointerId(0))
-          delay(500)
+          delay(500.milliseconds)
         }
       }
     }

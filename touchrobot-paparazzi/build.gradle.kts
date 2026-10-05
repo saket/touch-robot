@@ -30,6 +30,7 @@ dependencies {
 
   lintChecks(libs.composeLintChecks)
 
+  testImplementation(libs.androidx.ktx)
   testImplementation(libs.junit)
   testImplementation(libs.assertk)
   testImplementation(libs.telephoto)

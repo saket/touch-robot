@@ -3,6 +3,7 @@ package me.saket.touchrobot
 import android.annotation.SuppressLint
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManagerGlobal
 import androidx.compose.ui.platform.ViewRootForTest
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.SemanticsMatcher
@@ -54,14 +55,42 @@ private suspend fun View.awaitNodeBounds(matcher: SemanticsMatcher, useUnmergedT
   }
 }
 
-@SuppressLint("VisibleForTests")
 private fun View.findFirstSemanticNode(matcher: SemanticsMatcher, useUnmergedTree: Boolean): SemanticsNode? {
+  // Preserve host-tree lookup for consumers on older Paparazzi versions.
+  findFirstSemanticNodeInTree(matcher, useUnmergedTree)?.let { return it }
+
+  // Newer Layoutlib versions keep popup and dialog windows outside the host's tree.
+  // Read the windows on every lookup so dismissed windows are never retained.
+  return paparazziWindowRoots().asSequence()
+    .distinct()
+    .filter { it !== this && it.isAttachedToWindow }
+    .firstNotNullOfOrNull {
+      it.findFirstSemanticNodeInTree(matcher, useUnmergedTree, attachedOnly = true)
+    }
+}
+
+internal fun paparazziWindowRoots(
+  windowViews: () -> List<View> = { WindowManagerGlobal.getInstance().windowViews },
+): List<View> = try {
+  windowViews()
+} catch (_: NoSuchMethodError) {
+  emptyList()
+} catch (_: NoClassDefFoundError) {
+  emptyList()
+}
+
+@SuppressLint("VisibleForTests")
+private fun View.findFirstSemanticNodeInTree(
+  matcher: SemanticsMatcher,
+  useUnmergedTree: Boolean,
+  attachedOnly: Boolean = false,
+): SemanticsNode? {
   // The view hierarchy might have multiple ViewRootForTest. Each interop point between
   // Compose and Views (through AbstractComposeView) will have its own ViewRootForTest.
   // Find them all before running the semantics matcher.
   val viewRootForTests = mutableListOf<ViewRootForTest>()
   this.walkTree { child ->
-    if (child is ViewRootForTest) {
+    if (child is ViewRootForTest && (!attachedOnly || child.isAttachedToWindow)) {
       viewRootForTests.add(child)
     }
   }

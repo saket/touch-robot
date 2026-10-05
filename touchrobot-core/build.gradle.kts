@@ -10,7 +10,16 @@ android {
 
   compileSdk = libs.versions.compileSdk.get().toInt()
   lint.abortOnError = true
-  testOptions.targetSdk = libs.versions.compileSdk.get().toInt()
+  testOptions {
+    targetSdk = libs.versions.compileSdk.get().toInt()
+    managedDevices.localDevices {
+      create("pixel8api34") {
+        device = "Pixel 8"
+        apiLevel = 34
+        systemImageSource = "google"
+      }
+    }
+  }
 
   defaultConfig {
     minSdk = libs.versions.minSdk.get().toInt()

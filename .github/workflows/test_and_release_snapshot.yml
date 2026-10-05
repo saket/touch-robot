@@ -21,8 +21,24 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Run unit tests
-        run: ./gradlew check
+      - name: Run screenshot tests on the JVM
+        run: ./gradlew check verifyPaparazziDebug
+
+      - name: Enable KVM for the managed device
+        run: sudo chmod a+rw /dev/kvm
+
+      - name: Run screenshot tests on a device
+        run: ./gradlew pixel8api34DebugAndroidTest -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            **/build/reports/
+            **/build/test-results/
+            **/build/paparazzi/failures/
 
   deploy-snapshot:
     name: Deploy snapshot

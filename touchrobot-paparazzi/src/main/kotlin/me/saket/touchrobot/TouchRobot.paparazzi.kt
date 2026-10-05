@@ -2,13 +2,12 @@ package me.saket.touchrobot
 
 import android.annotation.SuppressLint
 import android.view.View
-import android.view.ViewGroup
 import android.view.WindowManagerGlobal
 import androidx.compose.ui.platform.ViewRootForTest
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.unit.roundToIntRect
-import androidx.core.view.children
+import androidx.core.view.allViews
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.milliseconds
@@ -69,25 +68,9 @@ private fun findAllWindowRoots(hostWindowRoot: View): List<View> {
 private fun View.findFirstSemanticNode(matcher: SemanticsMatcher, useUnmergedTree: Boolean): SemanticsNode? {
   // The view hierarchy might have multiple ViewRootForTest. Each interop point between
   // Compose and Views (through AbstractComposeView) will have its own ViewRootForTest.
-  // Find them all before running the semantics matcher.
-  val viewRootForTests = mutableListOf<ViewRootForTest>()
-  this.walkTree { child ->
-    if (child is ViewRootForTest) {
-      viewRootForTests.add(child)
-    }
-  }
-  return viewRootForTests.firstNotNullOfOrNull {
+  return allViews.filterIsInstance<ViewRootForTest>().firstNotNullOfOrNull {
     val root = if (useUnmergedTree) it.semanticsOwner.unmergedRootSemanticsNode else it.semanticsOwner.rootSemanticsNode
     root.findFirst(matcher)
-  }
-}
-
-private fun View.walkTree(block: (View) -> Unit) {
-  block(this)
-  if (this is ViewGroup) {
-    for (child in children) {
-      child.walkTree(block)
-    }
   }
 }
 

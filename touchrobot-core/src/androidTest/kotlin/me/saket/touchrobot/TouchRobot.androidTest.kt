@@ -8,7 +8,6 @@ import androidx.compose.ui.platform.ViewRootForTest
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
-import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.roundToIntRect
 import androidx.core.view.children
 import kotlinx.coroutines.delay
@@ -20,19 +19,22 @@ internal fun <A : ComponentActivity> TouchRobot.onNode(
   rule: AndroidComposeTestRule<*, A>,
   matcher: SemanticsMatcher,
 ): TouchRobotTarget {
-  return onBounds {
+  return onTargetBounds {
     rule.activity.window.decorView.awaitNodeBounds(matcher)
   }
 }
 
-private suspend fun View.awaitNodeBounds(matcher: SemanticsMatcher): IntRect {
+private suspend fun View.awaitNodeBounds(matcher: SemanticsMatcher): TouchRobotTarget.Bounds {
   val bounds = withTimeoutOrNull(200.milliseconds) {
     var node: SemanticsNode?
     while (true) {
       node = findFirstSemanticNode(matcher)
       if (node == null) delay(1.milliseconds) else break
     }
-    node.boundsInRoot.roundToIntRect()
+    TouchRobotTarget.Bounds(
+      windowRootView = rootView,
+      bounds = node.boundsInWindow.roundToIntRect(),
+    )
   }
   return checkNotNull(bounds) {
     "Timed out waiting for node that matches: $matcher"
